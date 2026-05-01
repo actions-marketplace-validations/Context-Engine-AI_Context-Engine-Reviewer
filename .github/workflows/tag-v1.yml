@@ -12,7 +12,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout (full history for tags)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -27,4 +27,3 @@ jobs:
           git tag -fa v1 -m "Release v1 (auto-update to latest main)"
           # Push the tag update to origin (force in case it already exists)
           git push origin -f v1
-

@@ -7,7 +7,7 @@ import {
   PAYLOAD_TAG_CLOSE
 } from '../messages';
 import { FileDiff } from '../diff';
-import { Context } from '@actions/github/lib/context';
+import { GitHubContext } from '../types';
 import { AIComment, PullRequestSummary } from '../prompts';
 import config from '../config';
 
@@ -37,7 +37,7 @@ jest.mock('../config', () => ({
 describe('Messages', () => {
   const mockContext = {
     repo: { owner: 'test-owner', repo: 'test-repo' }
-  } as Context;
+  } as GitHubContext;
 
   const mockFileDiffs: FileDiff[] = [
     {

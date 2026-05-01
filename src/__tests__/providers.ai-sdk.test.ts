@@ -62,6 +62,8 @@ describe('AISDKProvider', () => {
     expect(args.schema).toEqual({ type: 'object' });
     expect(args.temperature).toBe(0); // defaulted
     expect(args.model).toEqual({ provider: 'ai-sdk', modelName: 'gpt-4o-mini' });
+    expect(typeof args.experimental_repairText).toBe('function');
+    await expect(args.experimental_repairText({ text: '```json\n{"ok":true}\n```', error: new Error('parse') })).resolves.toBe('{"ok":true}');
 
     // returns the parsed object
     expect(result).toEqual({ ok: true, value: 42 });
@@ -115,4 +117,3 @@ describe('AISDKProvider', () => {
     ).rejects.toThrow('upstream failure');
   });
 });
-

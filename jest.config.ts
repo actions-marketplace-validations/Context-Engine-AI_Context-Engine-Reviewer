@@ -6,6 +6,8 @@ const config: Config = {
   testMatch: ['**/__tests__/**/*.test.ts'],
   setupFiles: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
+    '^@actions/core$': '<rootDir>/src/__mocks__/@actions/core.ts',
+    '^@actions/github$': '<rootDir>/src/__mocks__/@actions/github.ts',
     '^@octokit/action$': '<rootDir>/src/__mocks__/@octokit/action.ts',
     '^@octokit/plugin-retry$': '<rootDir>/src/__mocks__/@octokit/plugin-retry.ts',
     '^@octokit/plugin-throttling$': '<rootDir>/src/__mocks__/@octokit/plugin-throttling.ts'
@@ -13,9 +15,7 @@ const config: Config = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest'
   },
-  transformIgnorePatterns: [
-    '/node_modules/(?!(@octokit)/)'
-  ],
+  transformIgnorePatterns: ['/node_modules/'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
@@ -32,4 +32,4 @@ const config: Config = {
   }
 };
 
-export default config; 
+export default config;

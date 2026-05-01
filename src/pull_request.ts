@@ -14,8 +14,8 @@ import {
 } from "./messages";
 import { FileDiff, parseFileDiff } from "./diff";
 import { Octokit } from "@octokit/action";
-import { Context } from "@actions/github/lib/context";
 import { buildComment, listPullRequestCommentThreads, isThreadRelevant } from "./comments";
+import { GitHubContext } from "./types";
 
 const IS_DRY_RUN = process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true";
 const FORCE_FULL_REVIEW = process.env.FORCE_FULL_REVIEW === "1" || process.env.FORCE_FULL_REVIEW === "true";
@@ -348,7 +348,7 @@ export async function handlePullRequest() {
 
 async function submitReview(
   octokit: Octokit,
-  context: Context,
+  context: GitHubContext,
   pull_request: {
     number: number;
     headSha: string;
@@ -833,7 +833,7 @@ async function submitReview(
 // Pagination helper to fetch all PR files
 async function fetchAllPullRequestFiles(
   octokit: Octokit,
-  context: Context,
+  context: GitHubContext,
   pull_number: number
 ) {
   const per_page = 100;

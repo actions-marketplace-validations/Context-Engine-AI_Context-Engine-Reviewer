@@ -1,7 +1,7 @@
 import { context } from "@actions/github";
 import { FileDiff } from "./diff";
 import { AIComment, PullRequestSummary } from "./prompts";
-import { Context } from "@actions/github/lib/context";
+import { GitHubContext } from "./types";
 import config from "./config";
 
 export const OVERVIEW_MESSAGE_SIGNATURE =
@@ -181,7 +181,7 @@ export function buildOverviewMessage(
 }
 
 export function buildReviewSummary(
-  context: Context,
+  context: GitHubContext,
   files: FileDiff[],
   commits: {
     sha: string;

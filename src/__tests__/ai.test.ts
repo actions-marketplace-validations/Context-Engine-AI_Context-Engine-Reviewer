@@ -49,4 +49,26 @@ describe('ai.runPrompt', () => {
     expect(runInference).toHaveBeenCalledWith(expect.objectContaining({ temperature: 1 }));
   });
 
+  test('accepts Z.AI glm-5 model through AI SDK provider', async () => {
+    const runInference = jest.fn().mockResolvedValue({ ok: 1 });
+    const constructors: any[] = [];
+    const { runPrompt } = await isolate(
+      { llmProvider: 'ai-sdk', llmModel: 'glm-5' },
+      {
+        ai: {
+          __esModule: true,
+          AISDKProvider: class {
+            constructor(public _create: any, public _name: string) {
+              constructors.push({ create: _create, name: _name });
+            }
+            runInference = runInference;
+          }
+        }
+      }
+    );
+    await runPrompt({ prompt: 'p', systemPrompt: 's', schema: schema as any });
+    expect(constructors[0].name).toBe('glm-5');
+    expect(runInference).toHaveBeenCalledWith(expect.objectContaining({ temperature: 1 }));
+  });
+
 });

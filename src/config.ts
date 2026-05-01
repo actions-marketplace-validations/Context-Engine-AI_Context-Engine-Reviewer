@@ -15,6 +15,7 @@ export class Config {
   public maxComments: number; // cap per run for inline comments
   public maxCodeblockLines: number; // cap lines inside fenced code blocks in comments
   public maxReviewChars: number; // cap total characters of diffs per LLM call
+  public zaiBaseUrl: string | undefined;
 
   constructor() {
     this.githubToken = process.env.GITHUB_TOKEN;
@@ -33,7 +34,8 @@ export class Config {
       console.log(`Using default LLM_PROVIDER '${this.llmProvider}'`);
     }
 
-    this.llmApiKey = process.env.LLM_API_KEY;
+    const isZaiModel = /^glm-/i.test(this.llmModel || "");
+    this.llmApiKey = process.env.LLM_API_KEY || (isZaiModel ? process.env.ZAI_API_KEY : undefined);
     const isBedrockWithAwsCreds = this.llmModel?.includes('qwen.') ||
                                    this.llmModel?.includes('anthropic.') ||
                                    this.llmModel?.includes('meta.') ||
@@ -42,7 +44,7 @@ export class Config {
 
     // AWS Bedrock with IAM credentials does not require an LLM API key.
     if (!this.llmApiKey && !(isBedrockWithAwsCreds && hasAwsCredentials)) {
-      throw new Error("LLM_API_KEY is not set");
+      throw new Error(isZaiModel ? "LLM_API_KEY or ZAI_API_KEY is not set" : "LLM_API_KEY is not set");
     }
 
     // GitHub Enterprise Server support
@@ -50,6 +52,8 @@ export class Config {
       process.env.GITHUB_API_URL || getInput('github_api_url') || 'https://api.github.com';
     this.githubServerUrl =
       process.env.GITHUB_SERVER_URL || getInput('github_server_url') || 'https://github.com';
+
+    this.zaiBaseUrl = process.env.ZAI_BASE_URL || getInput('zai_base_url') || undefined;
 
     // Custom review mode: 'on' | 'off' | 'auto' (default)
     this.customMode = (
@@ -134,6 +138,7 @@ export default process.env.NODE_ENV === "test"
       customMode: "off",
       reviewScopes: ["security","performance","best-practices"],
       allowTitleUpdate: false,
-      loadInputs: jest.fn(),
+      zaiBaseUrl: undefined,
+      loadInputs: () => undefined,
     }
   : configInstance!;

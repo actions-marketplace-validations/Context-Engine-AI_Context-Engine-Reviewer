@@ -6,7 +6,7 @@ branding:
   color: "black"
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/main.js"
 
 inputs:
@@ -34,6 +34,10 @@ inputs:
     required: false
     description: 'Override LLM provider (e.g., ai-sdk)'
     default: ''
+  zai_base_url:
+    required: false
+    description: 'Z.AI OpenAI-compatible base URL for glm-* models'
+    default: 'https://api.z.ai/api/coding/paas/v4/'
 
   review_scopes:
     required: false

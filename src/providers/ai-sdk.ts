@@ -3,6 +3,26 @@ import config from "../config";
 import { info } from "@actions/core";
 import { generateObject } from "ai";
 
+function repairJsonText(text: string): string | null {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced?.[1]) return fenced[1].trim();
+
+  const objectStart = trimmed.indexOf("{");
+  const objectEnd = trimmed.lastIndexOf("}");
+  if (objectStart >= 0 && objectEnd > objectStart) {
+    return trimmed.slice(objectStart, objectEnd + 1).trim();
+  }
+
+  const arrayStart = trimmed.indexOf("[");
+  const arrayEnd = trimmed.lastIndexOf("]");
+  if (arrayStart >= 0 && arrayEnd > arrayStart) {
+    return trimmed.slice(arrayStart, arrayEnd + 1).trim();
+  }
+
+  return null;
+}
+
 export class AISDKProvider implements AIProvider {
   private createAiFunc: any;
   private modelName: string;
@@ -58,6 +78,7 @@ export class AISDKProvider implements AIProvider {
       temperature: temperature || 0,
       system,
       schema,
+      experimental_repairText: async ({ text }) => repairJsonText(text),
     });
 
     if (process.env.DEBUG) {

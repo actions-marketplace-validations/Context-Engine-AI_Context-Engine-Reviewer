@@ -46,6 +46,17 @@ describe('Config', () => {
     expect(() => new Config()).toThrow('LLM_API_KEY is not set');
   });
 
+  test('uses ZAI_API_KEY for Z.AI GLM models', () => {
+    process.env.GITHUB_TOKEN = 'test-token';
+    process.env.LLM_API_KEY = '';
+    process.env.ZAI_API_KEY = 'test-zai-key';
+    process.env.LLM_MODEL = 'glm-5';
+
+    const config = new Config();
+
+    expect(config.llmApiKey).toBe('test-zai-key');
+  });
+
   test('throws error when LLM_MODEL is not set', () => {
     process.env.GITHUB_TOKEN = 'test-token';
     process.env.LLM_API_KEY = 'test-api-key';

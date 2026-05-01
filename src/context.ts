@@ -1,14 +1,14 @@
 import { context, getOctokit } from "@actions/github";
-import { Context } from "@actions/github/lib/context";
+import { GitHubContext } from "./types";
 
-export async function loadContext(): Promise<Context> {
+export async function loadContext(): Promise<GitHubContext> {
   if (process.env.DEBUG) {
     return await loadDebugContext();
   }
   return context;
 }
 
-async function loadDebugContext(): Promise<Context> {
+async function loadDebugContext(): Promise<GitHubContext> {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error("GITHUB_TOKEN is not set");
   }

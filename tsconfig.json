@@ -4,6 +4,7 @@
     "target": "ES2022",
     "module": "esnext",
     "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "rootDir": "./",
     "baseUrl": "./",
     "sourceMap": true,
@@ -18,5 +19,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["./node_modules", "./dist", "**/*.test.ts"]
+  "exclude": ["./node_modules", "./dist", "src/__mocks__/**", "**/*.test.ts"]
 }

@@ -11,7 +11,7 @@ This repository starts from the reviewer shell we proved in the DOJ reviewer: Gi
 - Tracks reviewed commits so follow-up runs can review incrementally.
 - Batches large diffs by context size instead of sending one oversized prompt.
 - Supports local dry runs against real GitHub PRs.
-- Supports OpenAI, Anthropic, Google, and AWS Bedrock through AI SDK adapters.
+- Supports OpenAI, Anthropic, Google, Z.AI, and AWS Bedrock through AI SDK adapters.
 - Keeps the existing `custom_mode` review behavior for deeper senior-engineer analysis.
 
 ## Status
@@ -64,11 +64,13 @@ Required:
 
 - `GITHUB_TOKEN`: GitHub token with pull request comment permissions.
 - `LLM_MODEL`: model name.
-- `LLM_API_KEY`: model API key, unless using a provider that authenticates another way.
+- `LLM_API_KEY`: model API key, unless using a provider-specific key or provider that authenticates another way.
 
 Common optional settings:
 
 - `LLM_PROVIDER`: `ai-sdk`. Defaults to `ai-sdk`.
+- `ZAI_API_KEY`: Z.AI API key for `glm-*` models. Used when `LLM_API_KEY` is not set.
+- `ZAI_BASE_URL`: Z.AI OpenAI-compatible base URL. Defaults to `https://api.z.ai/api/coding/paas/v4/`.
 - `CUSTOM_MODE`: `on`, `off`, or `auto`. Defaults to `auto`.
 - `REVIEW_SCOPES`: comma-separated labels used by review configuration.
 - `REVIEW_MAX_COMMENTS`: maximum inline comments per run. Defaults to `40`.
@@ -83,7 +85,7 @@ The action input names mirror the environment variables where applicable, for ex
 
 ## Providers
 
-The reviewer uses the AI SDK provider surface. Direct API providers use `LLM_API_KEY`; AWS Bedrock can use AWS credentials instead.
+The reviewer uses the AI SDK provider surface. Direct API providers use `LLM_API_KEY`, Z.AI can use `ZAI_API_KEY`, and AWS Bedrock can use AWS credentials instead.
 
 OpenAI:
 
@@ -114,6 +116,18 @@ env:
   LLM_MODEL: gemini-2.0-flash-001
   LLM_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
 ```
+
+Z.AI GLM coding endpoint:
+
+```yaml
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  LLM_PROVIDER: ai-sdk
+  LLM_MODEL: glm-5
+  ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+```
+
+`ZAI_BASE_URL` defaults to the Z.AI coding endpoint, `https://api.z.ai/api/coding/paas/v4/`. Override it only when you intentionally want a different Z.AI OpenAI-compatible endpoint.
 
 AWS Bedrock:
 
@@ -165,6 +179,15 @@ GITHUB_TOKEN=
 LLM_PROVIDER=ai-sdk
 LLM_MODEL=gpt-5-mini
 LLM_API_KEY=
+```
+
+Example `.env` for Z.AI:
+
+```bash
+GITHUB_TOKEN=
+LLM_PROVIDER=ai-sdk
+LLM_MODEL=glm-5
+ZAI_API_KEY=
 ```
 
 Example `.env` for Bedrock:

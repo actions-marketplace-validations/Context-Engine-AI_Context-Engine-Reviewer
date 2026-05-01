@@ -10,6 +10,17 @@ export enum AIProviderType {
   AI_SDK = "ai-sdk",
 }
 
+const ZAI_CODING_BASE_URL = "https://api.z.ai/api/coding/paas/v4/";
+
+function createZAI(options?: Record<string, unknown>) {
+  const provider = createOpenAI({
+    ...options,
+    name: "zai",
+    baseURL: config.zaiBaseUrl || ZAI_CODING_BASE_URL,
+  });
+  return (modelId: string) => provider.chat(modelId);
+}
+
 const LLM_MODELS: Record<AIProviderType, ModelConfig[]> = {
   [AIProviderType.AI_SDK]: [
     // Anthropic
@@ -82,6 +93,12 @@ const LLM_MODELS: Record<AIProviderType, ModelConfig[]> = {
     {
       name: "gpt-4.1",
       createAi: createOpenAI,
+    },
+    // Z.AI GLM coding endpoint, OpenAI-compatible.
+    {
+      name: "glm-5",
+      createAi: createZAI,
+      temperature: 1,
     },
     // Google stable models https://ai.google.dev/gemini-api/docs/models/gemini
     {
