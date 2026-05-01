@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.context-engine/
+
+# Build/test output
+coverage/
+.nyc_output/
+dry/
+*.tsbuildinfo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local caches and tool state
+.cache/
+.npm/
+.eslintcache
+.context-engine/
+
+# Private planning
+ROADMAP.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS/editor noise
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp

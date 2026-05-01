@@ -1,0 +1,57 @@
+name: "Context Engine Reviewer"
+description: "AI-powered PR reviews for Context Engine workflows."
+author: "Context Engine"
+branding:
+  icon: "search"
+  color: "black"
+
+runs:
+  using: "node20"
+  main: "dist/main.js"
+
+inputs:
+  style_guide_rules:
+    required: false
+    description: 'Custom style guide rules that will be enforced during review by generating critical comments'
+    default: ''
+  github_api_url:
+    required: false
+    description: 'GitHub API URL for GitHub Enterprise Server (e.g., https://github.example.com/api/v3)'
+    default: 'https://api.github.com'
+  github_server_url:
+    required: false
+    description: 'GitHub Server URL for GitHub Enterprise Server (e.g., https://github.example.com)'
+    default: 'https://github.com'
+  custom_mode:
+    required: false
+    description: 'Enhanced senior engineer review mode: on | off | auto'
+    default: 'auto'
+  llm_model:
+    required: false
+    description: 'Override LLM model (e.g., gpt-4o-mini)'
+    default: ''
+  llm_provider:
+    required: false
+    description: 'Override LLM provider (e.g., ai-sdk)'
+    default: ''
+
+  review_scopes:
+    required: false
+    description: 'Comma-separated review scopes to run: security,performance,best-practices'
+    default: ''
+  max_comments:
+    required: false
+    description: 'Maximum inline comments to post per run'
+    default: '40'
+  max_codeblock_lines:
+    required: false
+    description: 'Maximum lines retained inside fenced code blocks in comments'
+    default: '60'
+  max_review_chars:
+    required: false
+    description: 'Approximate maximum diff characters per LLM review batch'
+    default: '725000'
+  allow_title_update:
+    required: false
+    description: 'Allow the action to update PR title when @context-engine-reviewer is present (default: false)'
+    default: 'false'

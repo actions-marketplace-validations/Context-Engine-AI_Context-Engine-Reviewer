@@ -1,0 +1,30 @@
+name: Tag v1 on main
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  tag-v1:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (full history for tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Force-update v1 tag to current commit
+        run: |
+          # Create/update an annotated tag named v1 pointing to HEAD
+          git tag -fa v1 -m "Release v1 (auto-update to latest main)"
+          # Push the tag update to origin (force in case it already exists)
+          git push origin -f v1
+
