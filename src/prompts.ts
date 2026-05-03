@@ -353,6 +353,7 @@ ${pr.files.map((file) => generateFileCodeDiff(file)).join("\n\n")}
     prompt: userPrompt,
     systemPrompt,
     schema,
+    enableContextEngineTools: true,
   });
 
   // Handle models that wrap response in a "parameters" object (e.g., Claude Sonnet 4.5)

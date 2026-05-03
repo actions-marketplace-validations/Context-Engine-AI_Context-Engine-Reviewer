@@ -15,7 +15,6 @@ function loadDotEnvIfExists() {
 function resolveGitHubToken(): string {
   // Some Octokit action auth checks expect this to be set; spoof for local runs
   if (!process.env.GITHUB_ACTION) process.env.GITHUB_ACTION = 'local';
-  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
   loadDotEnvIfExists();
   if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
   try {
@@ -26,6 +25,19 @@ function resolveGitHubToken(): string {
     }
   } catch {}
   throw new Error('No GITHUB_TOKEN found; set env/.env or run `gh auth login`.');
+}
+
+function setEnvIfProvided(name: string, value: unknown) {
+  if (typeof value === 'string' && value.trim().length) process.env[name] = value.trim();
+  else if (typeof value === 'number' && Number.isFinite(value)) process.env[name] = String(value);
+}
+
+export function applyContextEngineCliOptions(args: Record<string, any>) {
+  setEnvIfProvided('CONTEXT_ENGINE_API_KEY', args.contextEngineApiKey);
+  setEnvIfProvided('CONTEXT_ENGINE_MCP_URL', args.contextEngineMcpUrl);
+  setEnvIfProvided('CONTEXT_ENGINE_COLLECTION', args.contextEngineCollection);
+  setEnvIfProvided('CONTEXT_ENGINE_TOOLS', args.contextEngineTools);
+  setEnvIfProvided('CONTEXT_ENGINE_MAX_TOOLS', args.contextEngineMaxTools);
 }
 
 function resolveRepository(): { owner: string; repo: string } {
@@ -99,6 +111,11 @@ async function reviewPR(prNumber: number, dryRun: boolean, owner?: string, repo?
     restore = () => { (process.stdout.write as any) = o1; (process.stderr.write as any) = o2; fs.mkdirSync(path.dirname(outPath!), { recursive: true }); fs.writeFileSync(outPath!, chunks.join(''), 'utf8'); console.log(`\n[dry-run] Saved output to ${path.relative(process.cwd(), outPath!)}`); };
   }
 
+  if (dryRun && process.env.CONTEXT_ENGINE_API_KEY) {
+    const collection = process.env.CONTEXT_ENGINE_COLLECTION ? ` collection=${process.env.CONTEXT_ENGINE_COLLECTION}` : '';
+    console.log(`[dry-run] Context Engine MCP enabled for local review${collection}`);
+  }
+
   try {
     const mod = await import('./pull_request');
     await mod.handlePullRequest();
@@ -107,7 +124,7 @@ async function reviewPR(prNumber: number, dryRun: boolean, owner?: string, repo?
   }
 }
 
-function parseArgs(argv: string[]) {
+export function parseArgs(argv: string[]) {
   const args: Record<string, any> = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -120,6 +137,11 @@ function parseArgs(argv: string[]) {
     else if (a === '--event') { args.event = argv[++i]; }
     else if (a === '--owner') { args.owner = argv[++i]; }
     else if (a === '--repo') { args.repo = argv[++i]; }
+    else if (a === '--context-engine-api-key' || a === '--ce-api-key') { args.contextEngineApiKey = argv[++i]; }
+    else if (a === '--context-engine-mcp-url' || a === '--ce-url') { args.contextEngineMcpUrl = argv[++i]; }
+    else if (a === '--context-engine-collection' || a === '--ce-collection') { args.contextEngineCollection = argv[++i]; }
+    else if (a === '--context-engine-tools' || a === '--ce-tools') { args.contextEngineTools = argv[++i]; }
+    else if (a === '--context-engine-max-tools' || a === '--ce-max-tools') { args.contextEngineMaxTools = parseInt(argv[++i] || '0', 10); }
     else if (a === '--out' || a === '-out') { const next = argv[i+1]; if (next && !next.startsWith('-')) { args.out = next; i++; } else { args.out = true; } }
     else args._.push(a);
   }
@@ -128,6 +150,7 @@ function parseArgs(argv: string[]) {
 
 export async function main() {
   const args = parseArgs(process.argv.slice(2));
+  applyContextEngineCliOptions(args);
   if (args.listPrs) {
     await listPRs(args.owner, args.repo, args.state || 'open', args.limit || 10);
     return;
@@ -141,7 +164,7 @@ export async function main() {
     process.exitCode = 2;
     return;
   }
-  console.log('Usage:\n  review --list-prs [--state open|closed|all] [--limit N] [--owner <owner>] [--repo <repo>]\n  review --pr <number> [--dry-run] [--full] [--out [path] | -out [path]] [--owner <owner>] [--repo <repo>]\n  review --event <path> [--dry-run] (not yet implemented)');
+  console.log('Usage:\n  review --list-prs [--state open|closed|all] [--limit N] [--owner <owner>] [--repo <repo>]\n  review --pr <number> [--dry-run] [--full] [--out [path] | -out [path]] [--owner <owner>] [--repo <repo>] [--context-engine-api-key <key>] [--context-engine-collection <name>] [--context-engine-tools <csv>]\n  review --event <path> [--dry-run] (not yet implemented)');
 }
 
 if (require.main === module) {

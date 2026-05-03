@@ -6,10 +6,23 @@ jest.mock('@actions/core', () => ({
   warning: jest.fn(),
 }));
 
-// Mock generateObject from 'ai'
+// Mock AI SDK generation helpers.
 const mockGenerateObject = jest.fn();
+const mockGenerateText = jest.fn();
+const mockOutputObject = jest.fn((options: any) => ({ kind: 'object-output', ...options }));
+const mockStepCountIs = jest.fn((count: number) => ({ kind: 'step-count', count }));
 jest.mock('ai', () => ({
   generateObject: (...args: any[]) => (mockGenerateObject as any)(...args),
+  generateText: (...args: any[]) => (mockGenerateText as any)(...args),
+  Output: { object: (...args: any[]) => (mockOutputObject as any)(...args) },
+  stepCountIs: (...args: any[]) => (mockStepCountIs as any)(...args),
+}));
+
+const mockCreateContextEngineTools = jest.fn().mockResolvedValue(undefined);
+const mockAppendContextEngineToolInstructions = jest.fn((system?: string) => `${system || ''}\nCE tools enabled`);
+jest.mock('../context_engine_mcp', () => ({
+  createContextEngineTools: (...args: any[]) => (mockCreateContextEngineTools as any)(...args),
+  appendContextEngineToolInstructions: (...args: any[]) => (mockAppendContextEngineToolInstructions as any)(...args),
 }));
 
 describe('AISDKProvider', () => {
@@ -17,6 +30,10 @@ describe('AISDKProvider', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    mockCreateContextEngineTools.mockResolvedValue(undefined);
+    mockAppendContextEngineToolInstructions.mockImplementation((system?: string) => `${system || ''}\nCE tools enabled`);
+    mockOutputObject.mockImplementation((options: any) => ({ kind: 'object-output', ...options }));
+    mockStepCountIs.mockImplementation((count: number) => ({ kind: 'step-count', count }));
     delete process.env.DEBUG;
   });
 
@@ -55,6 +72,7 @@ describe('AISDKProvider', () => {
     expect(calls[0]).toEqual({ apiKey: (config as any).llmApiKey });
 
     // generateObject called with correct params
+    expect(mockCreateContextEngineTools).not.toHaveBeenCalled();
     expect(mockGenerateObject).toHaveBeenCalledTimes(1);
     const args = mockGenerateObject.mock.calls[0][0];
     expect(args.prompt).toBe('Hello');
@@ -115,5 +133,37 @@ describe('AISDKProvider', () => {
         schema: { type: 'object' } as any,
       })
     ).rejects.toThrow('upstream failure');
+  });
+
+  test('uses tool-loop structured output when Context Engine MCP tools are enabled', async () => {
+    const calls: any[] = [];
+    const createAiFunc = makeCreateAiFunc({ calls });
+    const tools = { search: { type: 'function' } };
+    mockCreateContextEngineTools.mockResolvedValue(tools);
+    mockGenerateText.mockResolvedValue({
+      output: { ok: true, reviewed: true },
+      totalUsage: { inputTokens: 11, outputTokens: 22 },
+    });
+
+    const provider = new AISDKProvider(createAiFunc as any, 'gpt-4o-mini');
+    const schema = { type: 'object', properties: { ok: { type: 'boolean' } } } as any;
+
+    const result = await provider.runInference({
+      prompt: 'Review this diff',
+      temperature: undefined as any,
+      system: 'sys',
+      schema,
+      enableContextEngineTools: true,
+    });
+
+    expect(result).toEqual({ ok: true, reviewed: true });
+    expect(mockGenerateObject).not.toHaveBeenCalled();
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+    const args = mockGenerateText.mock.calls[0][0];
+    expect(args.prompt).toBe('Review this diff');
+    expect(args.system).toContain('CE tools enabled');
+    expect(args.tools).toBe(tools);
+    expect(args.stopWhen).toEqual({ kind: 'step-count', count: 4 });
+    expect(args.output).toEqual({ kind: 'object-output', schema });
   });
 });

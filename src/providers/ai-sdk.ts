@@ -1,7 +1,8 @@
 import { AIProvider, InferenceConfig } from "@/ai";
 import config from "../config";
 import { info } from "@actions/core";
-import { generateObject } from "ai";
+import { generateObject, generateText, Output, stepCountIs } from "ai";
+import { appendContextEngineToolInstructions, createContextEngineTools } from "../context_engine_mcp";
 
 function repairJsonText(text: string): string | null {
   const trimmed = text.trim();
@@ -37,6 +38,7 @@ export class AISDKProvider implements AIProvider {
     temperature,
     system,
     schema,
+    enableContextEngineTools,
   }: InferenceConfig): Promise<any> {
     // Check if this is AWS Bedrock provider
     const isBedrockModel = this.modelName.includes('qwen.') ||
@@ -69,6 +71,25 @@ export class AISDKProvider implements AIProvider {
     } else {
       // Other providers use apiKey
       llm = this.createAiFunc({ apiKey: config.llmApiKey });
+    }
+
+    const contextEngineTools = enableContextEngineTools ? await createContextEngineTools() : undefined;
+    if (contextEngineTools) {
+      const { output, totalUsage } = await generateText({
+        model: llm(this.modelName),
+        prompt,
+        temperature: temperature || 0,
+        system: appendContextEngineToolInstructions(system),
+        tools: contextEngineTools,
+        stopWhen: stepCountIs(4),
+        output: Output.object({ schema }),
+      });
+
+      if (process.env.DEBUG) {
+        info(`usage: \n${JSON.stringify(totalUsage, null, 2)}`);
+      }
+
+      return output;
     }
 
     // Use structured output for all supported models (including Bedrock Qwen)

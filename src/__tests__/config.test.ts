@@ -127,6 +127,25 @@ describe('Config', () => {
     expect(config.githubServerUrl).toBe('https://github.example.com');
   });
 
+  test('loads optional Context Engine MCP configuration from environment', () => {
+    process.env.GITHUB_TOKEN = 'test-token';
+    process.env.LLM_API_KEY = 'test-api-key';
+    process.env.LLM_MODEL = 'test-model';
+    process.env.CONTEXT_ENGINE_API_KEY = 'ce-key';
+    process.env.CONTEXT_ENGINE_MCP_URL = 'https://dev.context-engine.ai/indexer/mcp';
+    process.env.CONTEXT_ENGINE_COLLECTION = 'repo-collection';
+    process.env.CONTEXT_ENGINE_TOOLS = 'repo_search,batch_search';
+    process.env.CONTEXT_ENGINE_MAX_TOOLS = '2';
+
+    const config = new Config();
+
+    expect(config.contextEngineApiKey).toBe('ce-key');
+    expect(config.contextEngineMcpUrl).toBe('https://dev.context-engine.ai/indexer/mcp');
+    expect(config.contextEngineCollection).toBe('repo-collection');
+    expect(config.contextEngineTools).toEqual(['repo_search', 'batch_search']);
+    expect(config.contextEngineMaxTools).toBe(2);
+  });
+
   //   test('skips loading inputs when DEBUG is set', () => {
   //     process.env.GITHUB_TOKEN = 'test-token';
   //     process.env.LLM_API_KEY = 'test-api-key';

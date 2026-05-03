@@ -16,6 +16,11 @@ export class Config {
   public maxCodeblockLines: number; // cap lines inside fenced code blocks in comments
   public maxReviewChars: number; // cap total characters of diffs per LLM call
   public zaiBaseUrl: string | undefined;
+  public contextEngineApiKey: string | undefined;
+  public contextEngineMcpUrl: string | undefined;
+  public contextEngineCollection: string | undefined;
+  public contextEngineTools: string[] | undefined;
+  public contextEngineMaxTools: number;
 
   constructor() {
     this.githubToken = process.env.GITHUB_TOKEN;
@@ -54,6 +59,27 @@ export class Config {
       process.env.GITHUB_SERVER_URL || getInput('github_server_url') || 'https://github.com';
 
     this.zaiBaseUrl = process.env.ZAI_BASE_URL || getInput('zai_base_url') || undefined;
+
+    this.contextEngineApiKey =
+      process.env.CONTEXT_ENGINE_API_KEY ||
+      process.env.CTXCE_API_KEY ||
+      getInput('context_engine_api_key') ||
+      undefined;
+    this.contextEngineMcpUrl =
+      process.env.CONTEXT_ENGINE_MCP_URL ||
+      process.env.CTXCE_INDEXER_URL ||
+      getInput('context_engine_mcp_url') ||
+      'https://dev.context-engine.ai/indexer/mcp';
+    this.contextEngineCollection =
+      process.env.CONTEXT_ENGINE_COLLECTION || getInput('context_engine_collection') || undefined;
+    const ceToolsRaw = process.env.CONTEXT_ENGINE_TOOLS || getInput('context_engine_tools') || '';
+    this.contextEngineTools = ceToolsRaw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const ceMaxToolsRaw = process.env.CONTEXT_ENGINE_MAX_TOOLS || getInput('context_engine_max_tools');
+    const parsedCeMaxTools = ceMaxToolsRaw && parseInt(ceMaxToolsRaw, 10);
+    this.contextEngineMaxTools = Number.isFinite(parsedCeMaxTools as any) && (parsedCeMaxTools as any)! > 0 ? (parsedCeMaxTools as any) : 9;
 
     // Custom review mode: 'on' | 'off' | 'auto' (default)
     this.customMode = (
@@ -139,6 +165,11 @@ export default process.env.NODE_ENV === "test"
       reviewScopes: ["security","performance","best-practices"],
       allowTitleUpdate: false,
       zaiBaseUrl: undefined,
+      contextEngineApiKey: undefined,
+      contextEngineMcpUrl: 'https://dev.context-engine.ai/indexer/mcp',
+      contextEngineCollection: undefined,
+      contextEngineTools: [],
+      contextEngineMaxTools: 9,
       loadInputs: () => undefined,
     }
   : configInstance!;

@@ -38,6 +38,26 @@ inputs:
     required: false
     description: 'Z.AI OpenAI-compatible base URL for glm-* models'
     default: 'https://api.z.ai/api/coding/paas/v4/'
+  context_engine_api_key:
+    required: false
+    description: 'Optional Context Engine API key. When set, reviewer LLMs can call Context Engine MCP tools for repository context.'
+    default: ''
+  context_engine_mcp_url:
+    required: false
+    description: 'Optional Context Engine MCP indexer URL.'
+    default: 'https://dev.context-engine.ai/indexer/mcp'
+  context_engine_collection:
+    required: false
+    description: 'Optional Context Engine collection name to scope reviewer MCP searches.'
+    default: ''
+  context_engine_tools:
+    required: false
+    description: 'Optional comma-separated Context Engine MCP tools exposed to the reviewer LLM.'
+    default: 'repo_search,batch_search,symbol_graph,batch_symbol_graph,graph_query,batch_graph_query,search_tests_for,search_config_for,search_commits_for'
+  context_engine_max_tools:
+    required: false
+    description: 'Maximum number of Context Engine MCP tools exposed to the reviewer LLM.'
+    default: '9'
 
   review_scopes:
     required: false

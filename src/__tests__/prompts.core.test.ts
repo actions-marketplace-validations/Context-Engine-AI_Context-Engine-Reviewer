@@ -32,6 +32,7 @@ describe('prompts.ts core prompts', () => {
     expect(call.prompt).toContain('- modified: a.ts');
     // Contains the diff section
     expect(call.prompt).toContain('File Diffs');
+    expect(call.enableContextEngineTools).toBeUndefined();
   });
 
   test('runReviewPrompt embeds diffs and respects styleGuideRules when empty', async () => {
@@ -49,6 +50,7 @@ describe('prompts.ts core prompts', () => {
     expect(call.systemPrompt).toContain('<IMPORTANT INSTRUCTIONS>');
     expect(call.prompt).toContain('src/x.ts');
     expect(call.prompt).toContain('__new hunk__');
+    expect(call.enableContextEngineTools).toBe(true);
   });
 
   test('runReviewCommentPrompt builds thread and diff scope', async () => {

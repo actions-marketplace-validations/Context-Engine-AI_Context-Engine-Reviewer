@@ -214,6 +214,7 @@ export type InferenceConfig = {
   temperature?: number;
   system?: string;
   schema: z.ZodObject<any, any>;
+  enableContextEngineTools?: boolean;
 };
 
 export interface AIProvider {
@@ -249,10 +250,12 @@ export async function runPrompt({
   prompt,
   systemPrompt,
   schema,
+  enableContextEngineTools,
 }: {
   prompt: string;
   systemPrompt?: string;
   schema: z.ZodObject<any, any>;
+  enableContextEngineTools?: boolean;
 }) {
   if (
     !Object.values(AIProviderType).includes(
@@ -285,5 +288,6 @@ export async function runPrompt({
     temperature: modelConfig.temperature,
     system: systemPrompt,
     schema,
+    enableContextEngineTools,
   });
 }

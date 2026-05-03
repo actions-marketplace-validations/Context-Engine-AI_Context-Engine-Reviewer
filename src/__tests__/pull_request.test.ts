@@ -350,6 +350,52 @@ describe('Pull Request Handler - incremental no new commits', () => {
 describe('Pull Request Handler - batching and fallback', () => {
   beforeEach(() => { jest.resetModules(); });
 
+  test('keeps per-batch review prompts when Context Engine is enabled', async () => {
+    const { handlePullRequest } = require('../pull_request');
+    const { loadContext } = require('../context');
+    const { initOctokit } = require('../octokit');
+    const { runSummaryPrompt, runReviewPrompt } = require('../prompts');
+    const cfg = require('../config').default;
+
+    Object.defineProperty(cfg, 'customMode', { value: 'off', writable: true });
+    Object.defineProperty(cfg, 'maxReviewChars', { value: 1, writable: true });
+    Object.defineProperty(cfg, 'contextEngineApiKey', { value: 'ce-key', writable: true });
+
+    (loadContext as jest.Mock).mockResolvedValue({
+      eventName: 'pull_request',
+      repo: { owner: 'o', repo: 'r' },
+      payload: { pull_request: { number: 7, title: 't', body: 'b', head: { sha: 'h' }, base: { sha: 'b' } } }
+    });
+
+    const mockOctokit = {
+      rest: {
+        pulls: {
+          listCommits: jest.fn().mockResolvedValue({ data: [{ sha: 'c', commit: { message: 'm' } }] }),
+          listFiles: jest.fn().mockResolvedValue({ data: [
+            { filename: 'src/a.ts', status: 'modified', patch: '@@ -1,1 +1,1 @@\n+A' },
+            { filename: 'src/b.ts', status: 'modified', patch: '@@ -1,1 +1,1 @@\n+B' },
+          ] }),
+          createReview: jest.fn().mockResolvedValue({ data: { id: 1 } }),
+          submitReview: jest.fn().mockResolvedValue({}),
+        },
+        issues: {
+          listComments: jest.fn().mockResolvedValue({ data: [] }),
+          createComment: jest.fn().mockResolvedValue({ data: { id: 1 } }),
+          updateComment: jest.fn().mockResolvedValue({}),
+        }
+      }
+    };
+    (initOctokit as jest.Mock).mockReturnValue(mockOctokit);
+    (runSummaryPrompt as jest.Mock).mockResolvedValue({ title: 'T', description: 'D', files: [], type: [] });
+    (runReviewPrompt as jest.Mock).mockResolvedValue({ comments: [], review: { estimated_effort_to_review: 1, score: 100, has_relevant_tests: true, security_concerns: 'No' } });
+
+    await handlePullRequest();
+
+    expect(runReviewPrompt).toHaveBeenCalledTimes(2);
+    expect(runReviewPrompt.mock.calls[0][0].files.map((f: any) => f.filename)).toEqual(['src/a.ts']);
+    expect(runReviewPrompt.mock.calls[1][0].files.map((f: any) => f.filename)).toEqual(['src/b.ts']);
+  });
+
   test('submits comments in batches and falls back on error', async () => {
     const { handlePullRequest } = require('../pull_request');
     const { loadContext } = require('../context');

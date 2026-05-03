@@ -80,8 +80,109 @@ Common optional settings:
 - `ALLOW_TITLE_UPDATE`: set to `true` to allow title rewriting when the PR title explicitly asks for it.
 - `GITHUB_API_URL`: GitHub Enterprise API URL.
 - `GITHUB_SERVER_URL`: GitHub Enterprise web URL.
+- `CONTEXT_ENGINE_API_KEY` or `CTXCE_API_KEY`: optional Context Engine API key. When set, review prompts can call Context Engine MCP tools for repository context.
+- `CONTEXT_ENGINE_MCP_URL` or `CTXCE_INDEXER_URL`: optional Context Engine MCP indexer URL. Defaults to `https://dev.context-engine.ai/indexer/mcp`.
+- `CONTEXT_ENGINE_COLLECTION`: optional collection name to scope MCP searches.
+- `CONTEXT_ENGINE_TOOLS`: optional comma-separated MCP tool allow-list. Defaults to `repo_search,batch_search,symbol_graph,batch_symbol_graph,graph_query,batch_graph_query,search_tests_for,search_config_for,search_commits_for`.
+- `CONTEXT_ENGINE_MAX_TOOLS`: maximum MCP tools exposed to reviewer LLMs. Defaults to `9`.
 
 The action input names mirror the environment variables where applicable, for example `custom_mode`, `llm_model`, `llm_provider`, `github_api_url`, and `github_server_url`.
+
+### Optional Context Engine MCP access
+
+By default, the reviewer works from PR diffs only. This is the free/default mode and does not make Context Engine network calls.
+
+Customers who want repository-aware review can opt in by providing a Context Engine API key. When enabled, the reviewer exposes a small allow-list of explicit Context Engine MCP tools to the LLM during review inference. If MCP setup or tool discovery fails, the reviewer logs a warning and falls back to the normal diff-only path for that run.
+
+The default SaaS MCP endpoint is:
+
+```text
+https://dev.context-engine.ai/indexer/mcp
+```
+
+The memory MCP endpoint is not used by this reviewer.
+
+#### GitHub Action usage
+
+You can enable Context Engine either with action inputs or environment variables. Supplying the API key is the opt-in switch; no separate boolean flag is required.
+
+Using environment variables:
+
+```yaml
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  LLM_PROVIDER: ai-sdk
+  LLM_MODEL: gpt-5-mini
+  LLM_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  CONTEXT_ENGINE_API_KEY: ${{ secrets.CONTEXT_ENGINE_API_KEY }}
+  CONTEXT_ENGINE_COLLECTION: your-indexed-collection
+```
+
+Using action inputs:
+
+```yaml
+with:
+  github_token: ${{ secrets.GITHUB_TOKEN }}
+  llm_provider: ai-sdk
+  llm_model: gpt-5-mini
+  context_engine_api_key: ${{ secrets.CONTEXT_ENGINE_API_KEY }}
+  context_engine_collection: your-indexed-collection
+```
+
+Optional action inputs:
+
+- `context_engine_mcp_url`: defaults to `https://dev.context-engine.ai/indexer/mcp`.
+- `context_engine_tools`: comma-separated MCP tool allow-list.
+- `context_engine_max_tools`: maximum number of MCP tools exposed to the reviewer LLM. Defaults to `9`.
+
+#### Default tool allow-list
+
+The default allow-list intentionally exposes direct code/navigation tools only:
+
+- `repo_search`
+- `batch_search`
+- `symbol_graph`
+- `batch_symbol_graph`
+- `graph_query`
+- `batch_graph_query`
+- `search_tests_for`
+- `search_config_for`
+- `search_commits_for`
+
+The unified `search` router is excluded by default because it can be noisy for an autonomous reviewer. Memory tools are also excluded by default and the reviewer does not connect to the memory MCP endpoint. `search_commits_for` is included so the reviewer can inspect relevant commit history or historically co-changing files when that materially improves review quality.
+
+You can override the allow-list if needed:
+
+```yaml
+env:
+  CONTEXT_ENGINE_TOOLS: repo_search,batch_search,symbol_graph,search_tests_for
+```
+
+#### Review batching behavior
+
+Context Engine tools are available only during PR review prompts, not during the PR summary prompt. The reviewer still uses the normal PR diff batching strategy:
+
+1. Split changed files into review batches using `REVIEW_MAX_REVIEW_CHARS`.
+2. Invoke the review prompt once per batch.
+3. Expose Context Engine tools independently inside each batch inference.
+
+This avoids prefetching repository context for the whole PR and keeps tool calls scoped to the batch being reviewed.
+
+#### Local dry-run debugging
+
+For local dry-run debugging, set the same variables in `.env` or pass them directly to the CLI. The dry-run path still uses the normal PR diff batching loop, so Context Engine tools are available independently to each review batch instead of prefetching repository context for the whole PR.
+
+```bash
+npm run review -- --pr 123 --dry-run \
+  --context-engine-api-key "$CONTEXT_ENGINE_API_KEY" \
+  --context-engine-collection your-indexed-collection
+```
+
+Optional dry-run flags:
+
+- `--context-engine-mcp-url` / `--ce-url`
+- `--context-engine-tools` / `--ce-tools`
+- `--context-engine-max-tools` / `--ce-max-tools`
 
 ## Providers
 
