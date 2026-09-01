@@ -81,6 +81,7 @@ ${limitedFileDiffs}
 
 
 Make sure each affected file is summarized and it's part of the returned JSON.
+Return the file summaries under the "files" key as an ARRAY of objects, each with "filename", "summary", and "title" string fields.
 `;
 
   const fileSchema = z.object({
@@ -97,6 +98,18 @@ Make sure each affected file is summarized and it's part of the returned JSON.
       ),
   });
 
+  // Some models (e.g. GLM) return files as a {path: summary} map and type as a
+  // bare string instead of the documented array shapes; accept both and
+  // normalize below, mirroring the comments tolerance in the review schema.
+  const filesUnion = z.union([
+    z.array(fileSchema),
+    z.record(z.string(), z.string()),
+    z.record(z.string(), fileSchema.partial()),
+  ]);
+
+  // files is optional with passthrough because some models put the summaries
+  // under a different key (e.g. affected_file_summaries); normalization below
+  // recovers them rather than failing the whole summary.
   const schema = z.object({
     title: z
       .string()
@@ -106,23 +119,53 @@ Make sure each affected file is summarized and it's part of the returned JSON.
     description: z
       .string()
       .describe("Informative description of the PR, describing its main theme"),
-    files: z
-      .array(fileSchema)
+    files: filesUnion
+      .optional()
       .describe(
         "List of files affected in the PR and summaries of their changes"
       ),
     type: z
-      .array(z.string())
+      .union([z.array(z.string()), z.string()])
       .optional()
       .default([])
       .describe("One or more types that describe this PR's main theme. Example: BUG, TESTS, ENHANCEMENT, DOCUMENTATION, SECURITY, OTHER"),
-  });
+  }).passthrough();
 
-  return (await runPrompt({
+  const raw = await runPrompt({
     prompt: userPrompt,
     systemPrompt,
     schema,
-  })) as PullRequestSummary;
+  });
+
+  const rawFiles =
+    raw.files ?? raw.affected_file_summaries ?? raw.file_summaries ?? raw.affected_files;
+
+  return {
+    title: raw.title,
+    description: raw.description,
+    files: normalizeSummaryFiles(rawFiles),
+    type: Array.isArray(raw.type) ? raw.type : raw.type ? [raw.type] : [],
+  } as PullRequestSummary;
+}
+
+type SummaryFile = PullRequestSummary["files"][number];
+
+function normalizeSummaryFiles(files: unknown): SummaryFile[] {
+  if (Array.isArray(files)) return files as SummaryFile[];
+  if (files && typeof files === "object") {
+    return Object.entries(files as Record<string, unknown>).map(([filename, value]) => {
+      if (typeof value === "string") {
+        return { filename, summary: value, title: filename };
+      }
+      const partial = (value ?? {}) as Partial<SummaryFile>;
+      return {
+        filename: partial.filename || filename,
+        summary: partial.summary || "",
+        title: partial.title || filename,
+      };
+    });
+  }
+  return [];
 }
 
 export type AIComment = {
@@ -164,6 +207,8 @@ export async function runReviewPrompt(
 You are an experienced senior software engineer tasked with reviewing a Git Pull Request (PR). Your goal is to provide comments to improve code quality, catch typos, potential bugs or security issues, and provide meaningful code suggestions when applicable. You should not make comments about adding comments, about code formatting, about code style or give implementation suggestions.
 
 The review should focus on new code added in the PR code diff (lines starting with '+') and be actionable.
+
+Report concrete bugs, security issues, and regressions as critical comments. Also report medium-severity correctness, concurrency, data-integrity, and performance concerns as non-critical comments when they are specific and actionable — do not stay silent just because an issue is not merge-blocking. Never invent issues to fill space; if the diff is genuinely clean, return no comments.
 
 
 
