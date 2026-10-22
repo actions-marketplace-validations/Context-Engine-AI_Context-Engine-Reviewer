@@ -309,8 +309,7 @@ export function appendContextEngineToolInstructions(system?: string): string | u
   const instructions = `
 
 <CONTEXT_ENGINE_TOOLS>
-Context Engine MCP tools may be available. Use explicit repository tools such as repo_search, batch_search, symbol_graph, batch_symbol_graph, graph_query, batch_graph_query, search_tests_for, search_config_for, and search_commits_for when the PR diff is insufficient and repository context would materially improve review accuracy. Use context_answer for conceptual questions about how the codebase works (for example "how is auth enforced in this service?") when raw search results are not enough.
-Only use returned repository context to assess code introduced in this PR. Do not invent issues from unrelated unchanged code.
+This repository is indexed by Context Engine: when the PR diff is insufficient for review, call repo_search FIRST, before searching the file tree or reading unchanged files; for how/why questions that span several files use context_answer. Results are verified source with exact line ranges: treat them as already read. For definitions/callers/importers use symbol_graph. Only use returned repository context to assess code introduced in this PR. Do not invent issues from unrelated unchanged code.
 </CONTEXT_ENGINE_TOOLS>`;
   return `${system || ""}${instructions}`;
 }
